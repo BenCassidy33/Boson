@@ -1,0 +1,3 @@
+[workspace]
+resolver = "3"
+members = ['boson-fonts', 'boson-layout', 'boson-net', 'boson-runtime', 'boson-window']
