@@ -1,3 +1,20 @@
 [workspace]
 resolver = "3"
-members = ['boson-fonts', 'boson-layout', 'boson-net', 'boson-runtime', 'boson-window']
+members = [
+    'crates/muon',
+    'crates/photon',
+    'crates/neutrino',
+    "crates/gluon",
+    "crates/boson-macros"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+muon = { path = "crates/muon" }
+photon = { path = "crates/photon" }
+neutrino = { path = "crates/neutrino" }
+boson-macros = { path = "crates/boson-macros" }

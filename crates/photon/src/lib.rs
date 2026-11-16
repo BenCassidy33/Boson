@@ -20,22 +20,22 @@ use winit::{
 };
 
 use crate::{
-    color::{BosonColor, RGB},
+    color::{Color, rgb::RGB},
     framebuffer::{DoubleBuffer, Framebuffer},
 };
 
-pub struct BosonWindow {
+pub struct PhotonWindow {
     window: Option<Arc<WinitWindow>>,
     surface: Option<SoftbufferSurface<OwnedDisplayHandle, Arc<WinitWindow>>>,
     buffers: Option<DoubleBuffer>,
 
     context: SoftbufferContext<OwnedDisplayHandle>,
     attributes: WindowAttributes,
-    sender: Sender<BosonWindowAction>,
-    receiver: Receiver<BosonWindowAction>,
+    sender: Sender<PhotonWindowAction>,
+    receiver: Receiver<PhotonWindowAction>,
 }
 
-impl BosonWindow {
+impl PhotonWindow {
     pub fn new(event_loop: &EventLoop<()>) -> anyhow::Result<Self> {
         Self::with_attributes(event_loop, WinitWindow::default_attributes())
     }
@@ -83,7 +83,7 @@ impl BosonWindow {
         Ok(())
     }
 
-    fn clear(&mut self, color: &dyn BosonColor) {
+    fn clear(&mut self, color: &dyn Color) {
         self.buffers.as_mut().unwrap().clear(color);
     }
 
@@ -123,7 +123,7 @@ impl BosonWindow {
     }
 }
 
-impl ApplicationHandler for BosonWindow {
+impl ApplicationHandler for PhotonWindow {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if let Err(error) = self.create_window(event_loop) {
             eprintln!("Failed to create window: {error}");
@@ -151,4 +151,4 @@ impl ApplicationHandler for BosonWindow {
     }
 }
 
-pub enum BosonWindowAction {}
+pub enum PhotonWindowAction {}

@@ -1,8 +1,8 @@
-pub trait BosonColor {
-    fn to_hex(&self) -> u32;
-    fn write_hex(&mut self, hex: u32);
-}
+use anyhow::bail;
 
+use crate::color::Color;
+
+#[derive(Debug)]
 pub struct RGB {
     red: u8,
     green: u8,
@@ -231,9 +231,26 @@ impl RGB {
             blue: 114,
         }
     }
+
+    pub fn try_parse(input: &str) -> anyhow::Result<Self> {
+        if input.len() < 10 || !input.starts_with("rgb(") || !input.ends_with(")") {
+            bail!("Invalid RGB color format");
+        }
+
+        let color_u8s = &input[4..input.len() - 1]
+            .split(",")
+            .map(|item| item.trim().parse::<u8>())
+            .collect::<std::result::Result<Vec<u8>, _>>()?;
+
+        if color_u8s.len() != 3 {
+            bail!("Invalid RGB color format");
+        }
+
+        Ok(Self::from((color_u8s[0], color_u8s[1], color_u8s[2])))
+    }
 }
 
-impl BosonColor for RGB {
+impl Color for RGB {
     fn to_hex(&self) -> u32 {
         ((self.red as u32) << 16) | ((self.green as u32) << 8) | (self.blue as u32)
     }

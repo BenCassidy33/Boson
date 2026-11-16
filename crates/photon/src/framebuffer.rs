@@ -6,7 +6,7 @@ use winit::{
     window::{self, Window},
 };
 
-use crate::color::BosonColor;
+use crate::color::Color;
 
 pub struct Framebuffer {
     pixels: Vec<u32>,
@@ -24,7 +24,7 @@ impl Framebuffer {
         }
     }
 
-    pub fn put_pixel(&mut self, x: u32, y: u32, color: &dyn BosonColor) {
+    pub fn put_pixel(&mut self, x: u32, y: u32, color: &dyn Color) {
         if x >= self.width.into() || y >= self.height.into() {
             return;
         }
@@ -32,7 +32,7 @@ impl Framebuffer {
         self.pixels[(y * self.width.get() + x) as usize] = color.to_hex();
     }
 
-    pub fn clear(&mut self, color: &dyn BosonColor) {
+    pub fn clear(&mut self, color: &dyn Color) {
         self.pixels.fill(color.to_hex());
     }
 
@@ -87,11 +87,11 @@ impl DoubleBuffer {
         self.height
     }
 
-    pub fn clear(&mut self, color: &dyn BosonColor) {
+    pub fn clear(&mut self, color: &dyn Color) {
         self.back.clear(color);
     }
 
-    pub fn put_pixel(&mut self, x: u32, y: u32, color: &dyn BosonColor) {
+    pub fn put_pixel(&mut self, x: u32, y: u32, color: &dyn Color) {
         if x >= self.width.into() || y >= self.height.into() {
             return;
         }
