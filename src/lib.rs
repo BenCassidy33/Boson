@@ -18,3 +18,12 @@ pub fn default_stylesheet<'a>(opts: Option<ParserOptions<'a>>) -> StyleSheet<'a>
     StyleSheet::parse(DEFAULT_STYLESHEET, opts.unwrap_or_default())
         .expect("Failed to parse default stylesheet")
 }
+
+#[macro_export]
+macro_rules! time_function {
+    ($msg:expr, $body:expr) => {{
+        let start = std::time::Instant::now();
+        let result = $body;
+        log::info!("{} {:?}", $msg, start.elapsed());
+    }};
+}

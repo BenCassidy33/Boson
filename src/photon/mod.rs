@@ -8,6 +8,7 @@ use scraper::Html;
 use crate::{
     default_html, default_stylesheet,
     photon::{font_manager::FontManager, layout::LayoutEngine},
+    time_function,
 };
 
 pub mod font_manager;
@@ -31,9 +32,9 @@ impl<'a> Photon<'a> {
         let layout_engine = LayoutEngine::new(document, stylesheet, cc);
         let mut font_manager = FontManager::new();
 
-        let fonts = layout_engine.get_fonts();
-        font_manager.load_fonts(fonts);
-        font_manager.add_fonts(cc);
+        time_function!("Fonts loaded in:", {
+            font_manager.load_and_add_fonts(layout_engine.get_fonts(), cc);
+        });
 
         Self {
             layout_engine,
