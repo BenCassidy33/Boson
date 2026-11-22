@@ -1,9 +1,0 @@
-[package]
-name = "photon"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-anyhow = "1.0.104"
-softbuffer = "0.4.8"
-winit = "0.30.13"
