@@ -1,17 +1,22 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::LazyLock};
 
+use anyhow::Context;
 use eframe::{
     CreationContext,
-    egui::{self},
+    egui::{self, Response},
 };
 use lightningcss::{
     properties::{Property, font::FontFamily},
     rules::CssRule,
     stylesheet::{ParserOptions, StyleSheet},
 };
-use scraper::{Html, Node, Selector, html::Select};
+use log::warn;
+use scraper::{ElementRef, Html, Node, Selector, html::Select};
 
-use crate::{DEFAULT_HTML, DEFAULT_STYLESHEET};
+use crate::{
+    DEFAULT_HTML, DEFAULT_STYLESHEET,
+    photon::{element_display, font_manager::FontManager},
+};
 
 pub struct LayoutEngine<'a> {
     document: Html,
@@ -92,7 +97,7 @@ impl<'a> LayoutEngine<'a> {
         todo!()
     }
 
-    pub fn select<'b>(&'b self, selector: &'b Selector) -> Select<'b, '_> {
+    pub fn select<'s, 'b>(&'s self, selector: &'b Selector) -> Select<'s, 'b> {
         self.document.select(selector)
     }
 
@@ -104,16 +109,40 @@ impl<'a> LayoutEngine<'a> {
         Html::parse_fragment(html)
     }
 
-    pub fn update_layout(&mut self) -> anyhow::Result<()> {
-        Ok(())
+    // pub fn update_layout(&mut self) -> anyhow::Result<()> {
+    //     Ok(())
+    // }
+    //
+    pub fn get_head_info(&self) {
+        todo!()
     }
 
-    pub fn display(&self, ui: eframe::egui::Ui, node: Node) {
-        match node {
-            Node::Doctype(doctype) => todo!(),
-            Node::Text(text) => todo!(),
-            Node::Element(element) => todo!(),
-            _ => todo!(),
+    pub fn get_body(&self) -> anyhow::Result<ElementRef<'_>> {
+        let selector = Selector::parse("body")?;
+        let body = self
+            .select(&selector)
+            .next()
+            .context("Failed to get body for document!")?;
+
+        Ok(body)
+    }
+
+    pub fn display(
+        &self,
+        ui: &mut eframe::egui::Ui,
+        font_manager: &FontManager,
+    ) -> anyhow::Result<()> {
+        let body = self.get_body()?;
+        if !body.has_children() {
+            warn!("HTML Body is empty!");
+            return Ok(());
         }
+
+        for child in body.child_elements() {
+            element_display::display(ui, *child, &self.stylesheet, font_manager);
+        }
+
+        // todo!();
+        Ok(())
     }
 }

@@ -1,27 +1,48 @@
-use std::{collections::HashMap, fs, os::fd};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    os::fd,
+};
 
 use eframe::{
     CreationContext,
-    egui::{FontData, FontInsert},
+    egui::{self, FontData, FontInsert},
 };
+use fontdb::{Database, Family, Query};
 use lightningcss::{printer::PrinterOptions, properties::font::FontFamily, traits::ToCss};
 use log::{info, warn};
 
 #[derive(Debug)]
 pub struct FontManager {
     pub loaded_fonts: HashMap<String, fontdb::ID>,
+    pub added_fonts: HashSet<fontdb::ID>,
     pub database: fontdb::Database,
+    pub main_font: Option<fontdb::ID>,
 }
 
 impl FontManager {
+    pub const DEFAULT_FONT_SIZE: f32 = 16.0;
+
     pub fn new() -> Self {
         let mut database = fontdb::Database::default();
         database.load_system_fonts();
 
         Self {
             loaded_fonts: HashMap::new(),
+            added_fonts: HashSet::new(),
+            main_font: Self::get_default_system_font(&database),
             database,
         }
+    }
+
+    pub fn get_default_system_font(database: &fontdb::Database) -> Option<fontdb::ID> {
+        let families = [Family::Serif];
+        let query = Query {
+            families: &[Family::Serif],
+            ..Default::default()
+        };
+
+        database.query(&query)
     }
 
     pub fn load_fonts(&mut self, fonts: Vec<&FontFamily<'_>>) {
@@ -30,7 +51,11 @@ impl FontManager {
         }
     }
 
-    pub fn load_and_add_fonts(&mut self, font_families: Vec<&FontFamily<'_>>, cc: &CreationContext<'_>) {
+    pub fn load_and_add_fonts(
+        &mut self,
+        font_families: Vec<&FontFamily<'_>>,
+        cc: &CreationContext<'_>,
+    ) {
         for family in font_families {
             self.load_and_add_font(family, cc);
         }
@@ -46,6 +71,20 @@ impl FontManager {
             return;
         };
         self.add_font(&font_name, &font_id, cc);
+    }
+
+    pub fn get_main_font_for_egui(&self, size: f32) -> egui::FontId {
+        self.font_id_into_egui_font(&self.main_font.expect("Main Font Not Found"), size)
+            .expect("Failed to get default font!")
+    }
+
+    pub fn font_id_into_egui_font(&self, id: &fontdb::ID, size: f32) -> Option<egui::FontId> {
+        let face = self.database.face(*id)?;
+        let family_name = face.families.first()?.0.clone();
+        Some(egui::FontId::new(
+            size,
+            egui::FontFamily::Name(family_name.into()),
+        ))
     }
 
     pub fn get_font_name(font_family: &FontFamily<'_>) -> Option<String> {
@@ -100,13 +139,22 @@ impl FontManager {
         self.loaded_fonts.insert(font_name, font_id);
     }
 
-    pub fn add_loaded_fonts(&self, cc: &CreationContext<'_>) {
-        for (font_name, font_id) in &self.loaded_fonts {
-            self.add_font(font_name, font_id, cc);
+    pub fn add_loaded_fonts(&mut self, cc: &CreationContext<'_>) {
+        for (font_name, font_id) in self.loaded_fonts.clone() {
+            self.add_font(&font_name, &font_id, cc);
         }
     }
 
-    pub fn add_font(&self, font_name: &String, font_id: &fontdb::ID, cc: &CreationContext<'_>) {
+    pub fn add_font(&mut self, font_name: &String, font_id: &fontdb::ID, cc: &CreationContext<'_>) {
+        if self.added_fonts.contains(font_id) {
+            info!(
+                "Font {} was already added to egui context. Skipping...",
+                font_name
+            );
+
+            return;
+        };
+
         let Some(face) = self.database.face(*font_id) else {
             warn!("Failed to get font face for {}", font_name);
             return;
@@ -132,6 +180,7 @@ impl FontManager {
 
         let new_font = FontInsert::new(&font_name, font_data, Vec::new());
         cc.egui_ctx.add_font(new_font);
+        self.added_fonts.insert(font_id.clone());
         info!("Successfully loaded font: {}", font_name);
     }
 }

@@ -1,4 +1,7 @@
-use boson::photon::{self, Photon, layout::LayoutEngine};
+use boson::{
+    photon::{self, Photon, layout_engine::LayoutEngine},
+    time_function,
+};
 
 use scraper::Selector;
 use tracing_subscriber::{EnvFilter, Layer, layer::SubscriberExt, util::SubscriberInitExt};
@@ -23,17 +26,9 @@ fn init_tracing() {
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
-    // init_tracing();
 
     let native_options = eframe::NativeOptions::default();
-    eframe::run_native(
-        "Photon",
-        native_options,
-        Box::new(|cc| {
-            let photon = Photon::new(cc, None, None, None);
-            Ok(Box::new(photon))
-        }),
-    )?;
+    eframe::run_native("Photon", native_options, Box::new(Photon::start))?;
 
     Ok(())
 }

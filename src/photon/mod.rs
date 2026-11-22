@@ -7,17 +7,22 @@ use scraper::Html;
 
 use crate::{
     default_html, default_stylesheet,
-    photon::{font_manager::FontManager, layout::LayoutEngine},
+    photon::{font_manager::FontManager, layout_engine::LayoutEngine},
     time_function,
 };
 
+pub mod element_display;
 pub mod font_manager;
-pub mod layout;
+pub mod layout_engine;
+pub mod tag;
 
 #[derive(Debug)]
 pub struct Photon<'a> {
     pub layout_engine: LayoutEngine<'a>,
     pub font_manager: FontManager,
+    pub ctx: egui::Context,
+
+    pub first_display: bool,
 }
 
 impl<'a> Photon<'a> {
@@ -39,14 +44,33 @@ impl<'a> Photon<'a> {
         Self {
             layout_engine,
             font_manager: FontManager::new(),
+            ctx: cc.egui_ctx.clone(),
+
+            first_display: false,
         }
+    }
+
+    pub fn start(
+        cc: &eframe::CreationContext<'_>,
+    ) -> Result<Box<dyn eframe::App>, Box<dyn std::error::Error + Send + Sync>> {
+        let photon = time_function!("Photon started in:", { Photon::new(cc, None, None, None) });
+        Ok(Box::new(photon))
     }
 }
 
 impl<'a> eframe::App for Photon<'a> {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            self.layout_engine.update_layout();
+            if !self.first_display {
+                time_function!(
+                    "First Render in: ",
+                    self.layout_engine.display(ui, &self.font_manager).unwrap()
+                );
+
+                self.first_display = true;
+            } else {
+                self.layout_engine.display(ui, &self.font_manager).unwrap();
+            }
         });
     }
 }

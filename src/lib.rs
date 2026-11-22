@@ -5,7 +5,9 @@ use scraper::Html;
 
 pub mod photon;
 
-pub const DEFAULT_HTML: &str = "<!doctype HTML><html><head></head><body></body></html>";
+// pub const DEFAULT_HTML: &str =
+//     "<!doctype HTML><html><head></head><body><div>Hello Photon!</div></body></html>";
+pub const DEFAULT_HTML: &str = include_str!("../resources/test_html.html");
 pub const DEFAULT_STYLESHEET: &str = include_str!("../resources/default_styles.css");
 
 #[inline]
@@ -25,5 +27,7 @@ macro_rules! time_function {
         let start = std::time::Instant::now();
         let result = $body;
         log::info!("{} {:?}", $msg, start.elapsed());
+
+        result
     }};
 }
