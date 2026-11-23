@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+async-trait = "0.1.92"
 bon = "3.10.3"
 eframe = "0.37.0"
 ego-tree = "0.11.1"
@@ -12,6 +13,7 @@ env_logger = "0.11.12"
 fontdb = "0.24.0"
 lightningcss = "1.0.0-alpha.72"
 log = "0.4.35"
+reqwest = { version = "0.13.5", features = ["cookies", "deflate", "form", "gzip", "native-tls"] }
 scraper = "0.29.0"
 serde = "1.0.229"
 serde_json = "1.0.154"
@@ -20,3 +22,6 @@ tokio = { version = "1.54.1", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tracing-timing = { version = "0.7.0", features = ["layer"] }
+
+boson-macros = { path = "./crates/boson-macros" }
+boson-ipc = { path = "./crates/boson-ipc" }

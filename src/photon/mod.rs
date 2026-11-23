@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use boson_ipc::{IpcHub, Message, ProcessRecv};
 use eframe::egui;
 use lightningcss::{
     printer::PrinterOptions,
@@ -7,69 +10,92 @@ use scraper::Html;
 
 use crate::{
     default_html, default_stylesheet,
-    photon::{font_manager::FontManager, layout_engine::LayoutEngine},
+    electron::Electron,
+    photon::{self, font_manager::FontManager, ipc::FetchResource, layout_engine::LayoutEngine},
     time_function,
 };
 
 pub mod element_display;
 pub mod font_manager;
+pub mod ipc;
 pub mod layout_engine;
+pub mod statistics;
 pub mod tag;
 
-#[derive(Debug)]
 pub struct Photon<'a> {
-    pub layout_engine: LayoutEngine<'a>,
+    pub ipc_hub: Arc<IpcHub>,
+    pub recv: ProcessRecv,
     pub font_manager: FontManager,
-    pub ctx: egui::Context,
-
     pub first_display: bool,
+    pub layout_engine: Option<LayoutEngine<'a>>,
+    pub ctx: Option<egui::Context>,
 }
 
 impl<'a> Photon<'a> {
-    pub fn new(
+    pub fn new(ipc_hub: Arc<IpcHub>, recv: ProcessRecv) -> Self {
+        Self {
+            ipc_hub,
+            recv,
+            font_manager: FontManager::new(),
+            first_display: false,
+            layout_engine: None,
+            ctx: None,
+        }
+    }
+
+    pub fn init(
+        &mut self,
         cc: &eframe::CreationContext<'_>,
         document: Option<Html>,
         stylesheet: Option<StyleSheet<'a>>,
         opts: Option<ParserOptions<'a>>,
-    ) -> Self {
+    ) {
         let document = document.unwrap_or(default_html());
         let stylesheet = stylesheet.unwrap_or(default_stylesheet(opts));
-        let layout_engine = LayoutEngine::new(document, stylesheet, cc);
-        let mut font_manager = FontManager::new();
+
+        self.ctx = Some(cc.egui_ctx.clone());
+        self.layout_engine = Some(LayoutEngine::new(document, stylesheet, cc));
 
         time_function!("Fonts loaded in:", {
-            font_manager.load_and_add_fonts(layout_engine.get_fonts(), cc);
+            self.font_manager
+                .load_and_add_fonts(self.layout_engine.as_ref().unwrap().get_fonts(), cc);
         });
-
-        Self {
-            layout_engine,
-            font_manager: FontManager::new(),
-            ctx: cc.egui_ctx.clone(),
-
-            first_display: false,
-        }
     }
 
-    pub fn start(
-        cc: &eframe::CreationContext<'_>,
-    ) -> Result<Box<dyn eframe::App>, Box<dyn std::error::Error + Send + Sync>> {
-        let photon = time_function!("Photon started in:", { Photon::new(cc, None, None, None) });
-        Ok(Box::new(photon))
+    pub fn layout_engine(&self) -> &'a LayoutEngine {
+        self.layout_engine
+            .as_ref()
+            .expect("Photon Not Yet Initalized!")
     }
 }
 
 impl<'a> eframe::App for Photon<'a> {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, frame: &mut eframe::Frame) {
+        self.ipc_hub.send(
+            boson_ipc::Process::Electron,
+            FetchResource {
+                url: "http://www.google.com".to_string(),
+            },
+        );
+
         egui::CentralPanel::default().show(ui, |ui| {
             if !self.first_display {
                 time_function!(
                     "First Render in: ",
-                    self.layout_engine.display(ui, &self.font_manager).unwrap()
+                    self.layout_engine
+                        .as_ref()
+                        .unwrap()
+                        .display(ui, &self.font_manager)
+                        .unwrap()
                 );
 
                 self.first_display = true;
             } else {
-                self.layout_engine.display(ui, &self.font_manager).unwrap();
+                self.layout_engine
+                    .as_ref()
+                    .unwrap()
+                    .display(ui, &self.font_manager)
+                    .unwrap();
             }
         });
     }

@@ -1,4 +1,6 @@
 /target
+crates/boson-ipc/target
+crates/boson-macros/target
 
 
 # Added by cargo
