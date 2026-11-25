@@ -25,3 +25,5 @@ tracing-timing = { version = "0.7.0", features = ["layer"] }
 
 boson-macros = { path = "./crates/boson-macros" }
 boson-ipc = { path = "./crates/boson-ipc" }
+sysinfo = "0.40.4"
+uuid = "1.29.3"

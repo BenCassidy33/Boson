@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use boson_ipc::{IpcHub, Message, ProcessRecv};
+use boson_ipc::{IpcHub, IpcMessageExt, IpcPayload, ProcessRecv};
 use eframe::egui;
 use lightningcss::{
     printer::PrinterOptions,
@@ -9,16 +9,19 @@ use lightningcss::{
 use scraper::Html;
 
 use crate::{
+    collider::Collider,
     default_html, default_stylesheet,
-    electron::Electron,
-    photon::{self, font_manager::FontManager, ipc::FetchResource, layout_engine::LayoutEngine},
+    photon::{
+        self, font_manager::FontManager, layout_engine::LayoutEngine, photon_ipc::FetchResource,
+    },
+    spectra::spectra_ipc::{ReplyFrameData, RequestFrameData},
     time_function,
 };
 
 pub mod element_display;
 pub mod font_manager;
-pub mod ipc;
 pub mod layout_engine;
+pub mod photon_ipc;
 pub mod statistics;
 pub mod tag;
 
@@ -69,16 +72,17 @@ impl<'a> Photon<'a> {
     }
 }
 
+// TODO: This needs to be async somehow
 impl<'a> eframe::App for Photon<'a> {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, frame: &mut eframe::Frame) {
-        self.ipc_hub.send(
-            boson_ipc::Process::Electron,
-            FetchResource {
-                url: "http://www.google.com".to_string(),
-            },
-        );
+        self.ipc_hub
+            .send(boson_ipc::Process::Spectra, RequestFrameData {});
 
         egui::CentralPanel::default().show(ui, |ui| {
+            if let Ok(msg) = self.recv.try_recv() {
+                todo!();
+            }
+
             if !self.first_display {
                 time_function!(
                     "First Render in: ",

@@ -4,15 +4,15 @@ use eframe::egui::util::id_type_map::TypeId;
 use log::info;
 use tokio::runtime::{self, Runtime};
 
-use boson_ipc::{IpcHub, Message, ProcessRecv};
+use boson_ipc::{IpcHub, IpcPayload, ProcessRecv};
 
-pub struct Electron {
+pub struct Collider {
     ipc_hub: Arc<IpcHub>,
     recv: ProcessRecv,
     client: reqwest::Client,
 }
 
-impl Electron {
+impl Collider {
     pub fn new(ipc_hub: Arc<IpcHub>, recv: ProcessRecv) -> anyhow::Result<Self> {
         let client = reqwest::Client::new();
         Ok(Self {
@@ -30,12 +30,12 @@ impl Electron {
         );
 
         let handle = std::thread::Builder::new()
-            .name("Electron Backend".into())
+            .name("Collider Backend".into())
             .spawn(move || {
                 let result = runtime.block_on(self.run());
 
                 if let Err(err) = result {
-                    log::error!("Electron exited: {err}");
+                    log::error!("Collider exited: {err}");
                 };
             })?;
 
@@ -43,17 +43,21 @@ impl Electron {
     }
 
     async fn run(mut self) -> anyhow::Result<()> {
-        while let Some(msg) = self.recv.recv().await {
-            if let Err(err) = self.handle_message(msg).await {
-                log::error!("IPC error: {err}");
+        tokio::select! {
+            msg = self.recv.recv() => {
+                match msg {
+                    Some(msg) => self.handle_message(msg).await?,
+
+                    _ => {}
+                }
             }
         }
 
         Ok(())
     }
 
-    async fn handle_message(&self, message: boson_ipc::Message) -> anyhow::Result<()> {
-        dbg!(message.type_name());
+    async fn handle_message(&self, message: boson_ipc::IpcMessageWrapper) -> anyhow::Result<()> {
+        dbg!(message.payload.type_name());
         todo!();
     }
 }

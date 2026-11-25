@@ -1,5 +1,9 @@
 #![allow(warnings)]
 
+pub mod collider;
+pub mod photon;
+pub mod spectra;
+
 use std::{any, sync::Arc};
 
 use boson_macros::BosonIpcMessage;
@@ -7,11 +11,8 @@ use eframe::egui::mutex::Mutex;
 use lightningcss::stylesheet::{ParserOptions, StyleSheet};
 use scraper::Html;
 
-use crate::{electron::Electron, photon::Photon};
+use crate::{collider::Collider, photon::Photon, spectra::Spectra};
 use boson_ipc::{IpcHub, IpcMessage, ProcessRecv};
-
-pub mod electron;
-pub mod photon;
 
 pub const DEFAULT_HTML: &str = include_str!("../resources/test_html.html");
 pub const DEFAULT_STYLESHEET: &str = include_str!("../resources/default_styles.css");
@@ -41,7 +42,8 @@ macro_rules! time_function {
 pub struct Boson {
     hub: Arc<IpcHub>,
     photon: Photon<'static>,
-    electron: Electron,
+    spectra: Spectra,
+    collider: Collider,
 }
 
 #[derive(Debug, BosonIpcMessage)]
@@ -50,29 +52,37 @@ pub enum GlobalIPCMessage {
 }
 
 impl Boson {
-    fn new() -> anyhow::Result<Self> {
+    pub fn new() -> anyhow::Result<Self> {
         let hub = Arc::new(IpcHub::new());
         let photon_rx = hub.register(boson_ipc::Process::Photon);
-        let electron_rx = hub.register(boson_ipc::Process::Electron);
+        let collider_rx = hub.register(boson_ipc::Process::Collider);
+        let spectra_rx = hub.register(boson_ipc::Process::Spectra);
 
         let photon = Photon::new(hub.clone(), photon_rx);
-        let electron = Electron::new(hub.clone(), electron_rx)?;
+        let collider = Collider::new(hub.clone(), collider_rx)?;
+        let spectra = Spectra::new(hub.clone(), spectra_rx, 100)?;
 
         Ok(Self {
             hub,
             photon,
-            electron,
+            spectra,
+            collider,
         })
     }
 
     pub fn start() -> anyhow::Result<()> {
+        Self::start_with(Boson::new()?)
+    }
+
+    pub fn start_with(boson: Boson) -> anyhow::Result<()> {
         env_logger::init();
 
-        let mut boson = Self::new()?;
         let mut photon = boson.photon;
-        let mut electron = boson.electron;
+        let mut collider = boson.collider;
+        let mut spectra = boson.spectra;
 
-        electron.start();
+        collider.start();
+        spectra.start();
 
         eframe::run_native(
             "Photon",
