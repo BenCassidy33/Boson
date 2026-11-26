@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use eframe::egui;
 use gluon::{
+    GluonHub,
     ctx::GluonProcessContext,
     proc::{GluonError, GluonProcess},
 };
@@ -12,6 +13,7 @@ use lightningcss::{
 use scraper::Html;
 
 use crate::{
+    BosonProcess,
     collider::Collider,
     default_html, default_stylesheet,
     photon::{
@@ -33,15 +35,17 @@ pub struct Photon<'a> {
     pub first_display: bool,
     pub layout_engine: Option<LayoutEngine<'a>>,
     pub ctx: Option<egui::Context>,
+    pub hub: &'a GluonHub<BosonProcess>,
 }
 
 impl<'a> Photon<'a> {
-    pub fn new() -> Self {
+    pub fn new(hub: &'a GluonHub<BosonProcess>) -> Self {
         Self {
             font_manager: FontManager::new(),
             first_display: false,
             layout_engine: None,
             ctx: None,
+            hub,
         }
     }
 

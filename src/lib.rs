@@ -9,7 +9,7 @@ pub use gluon;
 use std::{any, sync::Arc};
 
 use eframe::egui::mutex::Mutex;
-use gluon::GluonHub;
+use gluon::{GluonHub, GluonMessage};
 use lightningcss::stylesheet::{ParserOptions, StyleSheet};
 use scraper::Html;
 
@@ -41,23 +41,20 @@ macro_rules! time_function {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum BosonProcesses {
+pub enum BosonProcess {
     Collider,
     Spectra,
     Photon,
 }
 
 pub struct Boson {
-    hub: GluonHub<BosonProcesses>,
-    // photon: Photon<'static>,
-    // spectra: Spectra,
-    // collider: Collider,
+    hub: GluonHub<BosonProcess>,
 }
 
-// #[derive(Debug, BosonIpcMessage)]
-// pub enum GlobalIPCMessage {
-//     Shutdown,
-// }
+#[derive(Debug, GluonMessage)]
+pub enum GlobalIPCMessage {
+    Shutdown,
+}
 
 impl Boson {
     pub fn start() -> anyhow::Result<Self> {
@@ -69,10 +66,11 @@ impl Boson {
         let spectra = Spectra::new(100)?;
 
         // hub.register(BosonProcesses::Photon, photon);
-        hub.register(BosonProcesses::Collider, collider);
-        hub.register(BosonProcesses::Spectra, spectra);
+        hub.register(BosonProcess::Collider, collider);
+        hub.register(BosonProcess::Spectra, spectra);
 
-        let mut photon = Photon::new();
+        let mut photon = Photon::new(&hub);
+
         eframe::run_native(
             "Photon",
             eframe::NativeOptions::default(),
