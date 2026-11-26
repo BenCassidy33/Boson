@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
-use boson_ipc::{IpcHub, IpcMessageExt, IpcPayload, ProcessRecv};
 use eframe::egui;
+use gluon::{
+    ctx::GluonProcessContext,
+    proc::{GluonError, GluonProcess},
+};
 use lightningcss::{
     printer::PrinterOptions,
     stylesheet::{ParserOptions, StyleSheet},
@@ -26,8 +29,6 @@ pub mod statistics;
 pub mod tag;
 
 pub struct Photon<'a> {
-    pub ipc_hub: Arc<IpcHub>,
-    pub recv: ProcessRecv,
     pub font_manager: FontManager,
     pub first_display: bool,
     pub layout_engine: Option<LayoutEngine<'a>>,
@@ -35,10 +36,8 @@ pub struct Photon<'a> {
 }
 
 impl<'a> Photon<'a> {
-    pub fn new(ipc_hub: Arc<IpcHub>, recv: ProcessRecv) -> Self {
+    pub fn new() -> Self {
         Self {
-            ipc_hub,
-            recv,
             font_manager: FontManager::new(),
             first_display: false,
             layout_engine: None,
@@ -72,17 +71,9 @@ impl<'a> Photon<'a> {
     }
 }
 
-// TODO: This needs to be async somehow
 impl<'a> eframe::App for Photon<'a> {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, frame: &mut eframe::Frame) {
-        self.ipc_hub
-            .send(boson_ipc::Process::Spectra, RequestFrameData {});
-
         egui::CentralPanel::default().show(ui, |ui| {
-            if let Ok(msg) = self.recv.try_recv() {
-                todo!();
-            }
-
             if !self.first_display {
                 time_function!(
                     "First Render in: ",

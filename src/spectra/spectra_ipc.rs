@@ -1,11 +1,11 @@
-use boson_macros::BosonIpcMessage;
+use gluon::GluonMessage;
 
 use crate::spectra::Frame;
 
-#[derive(Debug, BosonIpcMessage)]
+#[derive(Debug, GluonMessage)]
 pub struct RequestFrameData {}
 
-#[derive(Debug, BosonIpcMessage)]
+#[derive(Debug, GluonMessage)]
 pub struct ReplyFrameData {
-    pub inner: Vec<Frame>
+    pub inner: Vec<Frame>,
 }

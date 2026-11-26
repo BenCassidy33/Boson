@@ -4,15 +4,16 @@ pub mod collider;
 pub mod photon;
 pub mod spectra;
 
+pub use gluon;
+
 use std::{any, sync::Arc};
 
-use boson_macros::BosonIpcMessage;
 use eframe::egui::mutex::Mutex;
+use gluon::GluonHub;
 use lightningcss::stylesheet::{ParserOptions, StyleSheet};
 use scraper::Html;
 
 use crate::{collider::Collider, photon::Photon, spectra::Spectra};
-use boson_ipc::{IpcHub, IpcMessage, ProcessRecv};
 
 pub const DEFAULT_HTML: &str = include_str!("../resources/test_html.html");
 pub const DEFAULT_STYLESHEET: &str = include_str!("../resources/default_styles.css");
@@ -39,51 +40,39 @@ macro_rules! time_function {
     }};
 }
 
-pub struct Boson {
-    hub: Arc<IpcHub>,
-    photon: Photon<'static>,
-    spectra: Spectra,
-    collider: Collider,
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum BosonProcesses {
+    Collider,
+    Spectra,
+    Photon,
 }
 
-#[derive(Debug, BosonIpcMessage)]
-pub enum GlobalIPCMessage {
-    Shutdown,
+pub struct Boson {
+    hub: GluonHub<BosonProcesses>,
+    // photon: Photon<'static>,
+    // spectra: Spectra,
+    // collider: Collider,
 }
+
+// #[derive(Debug, BosonIpcMessage)]
+// pub enum GlobalIPCMessage {
+//     Shutdown,
+// }
 
 impl Boson {
-    pub fn new() -> anyhow::Result<Self> {
-        let hub = Arc::new(IpcHub::new());
-        let photon_rx = hub.register(boson_ipc::Process::Photon);
-        let collider_rx = hub.register(boson_ipc::Process::Collider);
-        let spectra_rx = hub.register(boson_ipc::Process::Spectra);
-
-        let photon = Photon::new(hub.clone(), photon_rx);
-        let collider = Collider::new(hub.clone(), collider_rx)?;
-        let spectra = Spectra::new(hub.clone(), spectra_rx, 100)?;
-
-        Ok(Self {
-            hub,
-            photon,
-            spectra,
-            collider,
-        })
-    }
-
-    pub fn start() -> anyhow::Result<()> {
-        Self::start_with(Boson::new()?)
-    }
-
-    pub fn start_with(boson: Boson) -> anyhow::Result<()> {
+    pub fn start() -> anyhow::Result<Self> {
         env_logger::init();
 
-        let mut photon = boson.photon;
-        let mut collider = boson.collider;
-        let mut spectra = boson.spectra;
+        let hub = GluonHub::new();
 
-        collider.start();
-        spectra.start();
+        let collider = Collider::new()?;
+        let spectra = Spectra::new(100)?;
 
+        // hub.register(BosonProcesses::Photon, photon);
+        hub.register(BosonProcesses::Collider, collider);
+        hub.register(BosonProcesses::Spectra, spectra);
+
+        let mut photon = Photon::new();
         eframe::run_native(
             "Photon",
             eframe::NativeOptions::default(),
@@ -93,6 +82,6 @@ impl Boson {
             }),
         );
 
-        Ok(())
+        Ok(Self { hub })
     }
 }

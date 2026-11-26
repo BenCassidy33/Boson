@@ -18,12 +18,11 @@ scraper = "0.29.0"
 serde = "1.0.229"
 serde_json = "1.0.154"
 strum = { version = "0.28.0", features = ["derive"] }
-tokio = { version = "1.54.1", features = ["full"] }
+tokio = { version = "1.54.1", features = ["full", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tracing-timing = { version = "0.7.0", features = ["layer"] }
-
-boson-macros = { path = "./crates/boson-macros" }
-boson-ipc = { path = "./crates/boson-ipc" }
+gluon = { path = "./crates/gluon" }
 sysinfo = "0.40.4"
 uuid = "1.29.3"
+thiserror = "2.0.21"

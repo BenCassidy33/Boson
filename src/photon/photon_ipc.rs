@@ -1,6 +1,4 @@
-use boson_macros::BosonIpcMessage;
-
-#[derive(Debug, BosonIpcMessage)]
+#[derive(Debug)]
 pub struct FetchResource {
     pub url: String,
 }

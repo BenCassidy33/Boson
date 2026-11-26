@@ -1,63 +1,49 @@
 use std::sync::Arc;
 
 use eframe::egui::util::id_type_map::TypeId;
+use gluon::{
+    ctx::GluonProcessContext,
+    proc::{GluonError, GluonProcess},
+};
 use log::info;
+use thiserror::Error;
 use tokio::runtime::{self, Runtime};
 
-use boson_ipc::{IpcHub, IpcPayload, ProcessRecv};
+use crate::BosonProcesses;
 
 pub struct Collider {
-    ipc_hub: Arc<IpcHub>,
-    recv: ProcessRecv,
     client: reqwest::Client,
 }
 
+#[derive(Debug, Error)]
+pub enum ColliderError {
+    #[error("Failed to initalize collider!")]
+    InitalizationFailed,
+}
+
 impl Collider {
-    pub fn new(ipc_hub: Arc<IpcHub>, recv: ProcessRecv) -> anyhow::Result<Self> {
+    pub fn new() -> anyhow::Result<Self> {
         let client = reqwest::Client::new();
-        Ok(Self {
-            ipc_hub,
-            client,
-            recv,
-        })
+        Ok(Self { client })
     }
 
-    pub fn start(mut self) -> anyhow::Result<std::thread::JoinHandle<()>> {
-        let runtime = Arc::new(
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()?,
-        );
-
-        let handle = std::thread::Builder::new()
-            .name("Collider Backend".into())
-            .spawn(move || {
-                let result = runtime.block_on(self.run());
-
-                if let Err(err) = result {
-                    log::error!("Collider exited: {err}");
-                };
-            })?;
-
-        Ok(handle)
+    fn run_collider(&mut self) -> Result<(), ColliderError> {
+        todo!()
     }
+}
 
-    async fn run(mut self) -> anyhow::Result<()> {
+#[async_trait::async_trait]
+impl GluonProcess for Collider {
+    async fn run(&mut self, mut ctx: GluonProcessContext) -> Result<(), GluonError> {
         tokio::select! {
-            msg = self.recv.recv() => {
-                match msg {
-                    Some(msg) => self.handle_message(msg).await?,
+            msg = ctx.recv() => {
+                todo!()
+            }
 
-                    _ => {}
-                }
+            else => {
+                self.run_collider()?;
+                Ok(())
             }
         }
-
-        Ok(())
-    }
-
-    async fn handle_message(&self, message: boson_ipc::IpcMessageWrapper) -> anyhow::Result<()> {
-        dbg!(message.payload.type_name());
-        todo!();
     }
 }

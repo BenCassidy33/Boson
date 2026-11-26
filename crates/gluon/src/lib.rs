@@ -11,24 +11,38 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
-use crate::{ctx::GluonProcessContext, msg::GluonCall, proc::GluonProcess};
+pub use crate::{
+    ctx::GluonProcessContext,
+    msg::{GluonCall, GluonMessage},
+    proc::GluonProcess,
+};
 
 pub struct GluonRoute {
     pub type_id: TypeId,
     pub sender: mpsc::Sender<GluonCall>,
 }
 
-pub enum GluonHubError<R: Eq + Hash> {
+#[derive(Debug)]
+pub enum GluonHubError<R> {
     DuplicateProcess(R),
+    ProcessNotFound(R),
+    ProcessUnavailable(R),
+    ReplyDropped,
 }
 
-pub struct GluonHub<R: Eq + Hash> {
+pub struct GluonHub<R>
+where
+    R: Eq + Hash + Clone,
+{
     routes: Arc<Mutex<HashMap<R, GluonRoute>>>,
 }
 
-impl<R: Eq + Hash> GluonHub<R> {
+impl<R> GluonHub<R>
+where
+    R: Eq + Hash + Clone,
+{
     pub fn new() -> Self {
         Self {
             routes: Arc::new(Mutex::new(HashMap::new())),
@@ -36,7 +50,7 @@ impl<R: Eq + Hash> GluonHub<R> {
     }
 
     pub fn register<P: GluonProcess>(
-        &mut self,
+        &self,
         id: impl Into<R>,
         mut process: P,
     ) -> Result<(), GluonHubError<R>> {
@@ -57,15 +71,64 @@ impl<R: Eq + Hash> GluonHub<R> {
 
         tokio::spawn(async move {
             if let Err(error) = process.run(ctx).await {
-                eprintln!("Process Failed: {error}")
+                eprintln!("Process Failed! {error:?}")
             }
         });
 
         Ok(())
     }
+
+    pub fn send(&self, to: &R, msg: Box<dyn GluonMessage>) -> Result<(), GluonHubError<R>> {
+        let sender = {
+            let routes = self.routes.lock().unwrap();
+
+            routes
+                .get(to)
+                .ok_or_else(|| GluonHubError::ProcessNotFound(to.clone()))?
+                .sender
+                .clone()
+        };
+
+        let call = GluonCall::new(msg, None);
+
+        sender
+            .try_send(call)
+            .map_err(|_| GluonHubError::ProcessUnavailable(to.clone()))?;
+
+        Ok(())
+    }
+
+    pub async fn send_recv(
+        &self,
+        to: &R,
+        msg: Box<dyn GluonMessage>,
+    ) -> Result<Box<dyn GluonMessage>, GluonHubError<R>> {
+        let sender = {
+            let routes = self.routes.lock().unwrap();
+
+            routes
+                .get(to)
+                .ok_or_else(|| GluonHubError::ProcessNotFound(to.clone()))?
+                .sender
+                .clone()
+        };
+
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let call = GluonCall::new(msg, Some(reply_tx));
+
+        sender
+            .send(call)
+            .await
+            .map_err(|_| GluonHubError::ProcessUnavailable(to.clone()))?;
+
+        reply_rx.await.map_err(|_| GluonHubError::ReplyDropped)
+    }
 }
 
-impl<R: Eq + Hash> Default for GluonHub<R> {
+impl<R> Default for GluonHub<R>
+where
+    R: Eq + Hash + Clone,
+{
     fn default() -> Self {
         Self::new()
     }

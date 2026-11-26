@@ -645,12 +645,11 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bon",
- "boson-ipc",
- "boson-macros",
  "eframe",
  "ego-tree",
  "env_logger",
  "fontdb",
+ "gluon",
  "lightningcss",
  "log",
  "reqwest",
@@ -659,30 +658,12 @@ dependencies = [
  "serde_json",
  "strum",
  "sysinfo",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "tracing-timing",
  "uuid",
-]
-
-[[package]]
-name = "boson-ipc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "tokio",
-]
-
-[[package]]
-name = "boson-macros"
-version = "0.1.0"
-dependencies = [
- "boson-ipc",
- "proc-macro2",
- "quote",
- "syn 3.0.10",
 ]
 
 [[package]]
@@ -1997,6 +1978,25 @@ dependencies = [
  "slotmap",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "gluon"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "gluon-macros",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "gluon-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.10",
 ]
 
 [[package]]

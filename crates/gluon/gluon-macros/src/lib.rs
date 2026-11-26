@@ -8,13 +8,9 @@ pub fn derive_gluon_message(token_stream: TokenStream) -> TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     quote::quote! {
-        impl #impl_generics ::gluon::Process
-            for #name #ty_generics #where_clause
-        {
-            fn as_any(&self) -> &dyn std::any::Any {
-                self
-            }
-        }
+
+        impl #impl_generics ::gluon::GluonMessage
+            for #name #ty_generics #where_clause {}
     }
     .into()
 }

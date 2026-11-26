@@ -9,8 +9,12 @@ use std::{
     time::Duration,
 };
 
-use boson_ipc::{IpcHub, IpcMessageExt, ProcessRecv};
+use gluon::{
+    ctx::GluonProcessContext,
+    proc::{GluonError, GluonProcess},
+};
 use sysinfo::{DiskUsage, Process, System};
+use tokio::time::interval;
 
 use crate::spectra::spectra_ipc::{ReplyFrameData, RequestFrameData};
 
@@ -89,13 +93,10 @@ pub struct Spectra {
     system: Arc<Mutex<sysinfo::System>>,
     frames: Arc<Mutex<Vec<Frame>>>,
     frame_capture_thread: Option<JoinHandle<()>>,
-
-    ipc_hub: Arc<IpcHub>,
-    recv: ProcessRecv,
 }
 
 impl Spectra {
-    pub fn new(ipc_hub: Arc<IpcHub>, recv: ProcessRecv, interval_ms: u64) -> anyhow::Result<Self> {
+    pub fn new(interval_ms: u64) -> anyhow::Result<Self> {
         Ok(Self {
             platform_info: PlatformInfo::new()?,
             pid: sysinfo::get_current_pid()?,
@@ -104,9 +105,6 @@ impl Spectra {
             system: Arc::new(Mutex::new(sysinfo::System::new_all()?)),
             frames: Arc::new(Mutex::new(Vec::new())),
             frame_capture_thread: None,
-
-            ipc_hub,
-            recv,
         })
     }
 
@@ -115,94 +113,47 @@ impl Spectra {
         Ok(system.process(current_pid))
     }
 
+    fn capture(&mut self) -> anyhow::Result<()> {
+        let frame = {
+            let mut sys = self.system.lock().unwrap();
+            Frame::capture(&mut sys)?
+        };
+
+        self.frames.lock().unwrap().push(frame);
+        Ok(())
+    }
+
     pub fn set_capture_interval_ms(&self, ms: u64) {
         self.capture_interval.store(ms, Ordering::Relaxed);
     }
 
-    pub fn start(mut self) -> anyhow::Result<JoinHandle<()>> {
-        let runtime = Arc::new(
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()?,
-        );
-
-        let frames = Arc::clone(&self.frames);
-        let system = Arc::clone(&self.system);
-        let interval_atomic = Arc::clone(&self.capture_interval);
-
-        let handle = std::thread::Builder::new()
-            .name("Spectra Backend".into())
-            .spawn(move || {
-                let result = runtime.block_on(self.run(frames, system, interval_atomic));
-
-                if let Err(err) = result {
-                    log::error!("Spectra exited: {err}");
-                };
-            })?;
-
-        Ok(handle)
+    pub fn get_frames(&self) -> MutexGuard<Vec<Frame>> {
+        self.frames.lock().unwrap()
     }
+}
 
-    async fn run(
-        &mut self,
-        frames: Arc<Mutex<Vec<Frame>>>,
-        system: Arc<Mutex<System>>,
-        interval_atomic: Arc<AtomicU64>,
-    ) -> anyhow::Result<()> {
-        let inital_interval = interval_atomic.load(Ordering::Relaxed);
-        let mut ticker = tokio::time::interval(Duration::from_millis(inital_interval));
-        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+#[async_trait::async_trait]
+impl GluonProcess for Spectra {
+    async fn run(&mut self, mut ctx: GluonProcessContext) -> Result<(), GluonError> {
+        let mut interval_period =
+            Duration::from_millis(self.capture_interval.load(Ordering::Relaxed));
 
+        let mut interval = tokio::time::interval(interval_period);
         loop {
-            let interval = interval_atomic.load(Ordering::Relaxed).max(1);
-
             tokio::select! {
-                msg = self.recv.recv() => {
-                    match msg {
-                        Some(msg) => {
-                            self.handle_message(msg).await?;
-                        },
-
-                        _ => {}
-                    };
+                msg = ctx.recv() => {
+                    todo!()
                 }
 
-                _ = ticker.tick() => {
-                    let frame_result = {
-                        let mut system = system.lock().unwrap();
-                        Frame::capture(&mut system)
-                    };
-
-                    match frame_result {
-                        Ok(frame) => {
-                            frames.lock().unwrap().push(frame);
-                        },
-
-                        Err(err) => {
-                            log::error!("Frame capture failed!");
-                        }
+                _ = interval.tick() => {
+                    match self.capture() {
+                        Err(err) => log::warn!("Spectra frame failed to capture!"),
+                        _ => {}
                     };
                 }
             };
         }
 
         Ok(())
-    }
-
-    async fn handle_message(&self, message: boson_ipc::IpcMessageWrapper) -> anyhow::Result<()> {
-        if message.payload.is::<RequestFrameData>() {
-            let frames: Vec<_> = self.get_frames().iter().cloned().collect();
-
-            self.ipc_hub
-                .send(boson_ipc::Process::Photon, ReplyFrameData { inner: frames });
-
-            return Ok(());
-        }
-
-        anyhow::bail!("Invalid Message: {:?}", message.payload.type_name())
-    }
-
-    pub fn get_frames(&self) -> MutexGuard<Vec<Frame>> {
-        self.frames.lock().unwrap()
     }
 }
