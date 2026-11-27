@@ -13,7 +13,7 @@ use lightningcss::{
 use scraper::Html;
 
 use crate::{
-    BosonProcess,
+    TachyonProcess,
     collider::Collider,
     default_html, default_stylesheet,
     photon::{
@@ -35,11 +35,11 @@ pub struct Photon<'a> {
     pub first_display: bool,
     pub layout_engine: Option<LayoutEngine<'a>>,
     pub ctx: Option<egui::Context>,
-    pub hub: &'a GluonHub<BosonProcess>,
+    pub hub: &'a GluonHub<TachyonProcess>,
 }
 
 impl<'a> Photon<'a> {
-    pub fn new(hub: &'a GluonHub<BosonProcess>) -> Self {
+    pub fn new(hub: &'a GluonHub<TachyonProcess>) -> Self {
         Self {
             font_manager: FontManager::new(),
             first_display: false,

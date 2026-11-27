@@ -1,8 +1,8 @@
-use boson::Boson;
+use tachyon::Tachyon;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    Boson::start()?;
+    Tachyon::start()?;
 
     Ok(())
 }

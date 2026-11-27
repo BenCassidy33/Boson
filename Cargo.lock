@@ -639,34 +639,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "boson"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "bon",
- "eframe",
- "ego-tree",
- "env_logger",
- "fontdb",
- "gluon",
- "lightningcss",
- "log",
- "reqwest",
- "scraper",
- "serde",
- "serde_json",
- "strum",
- "sysinfo",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "tracing-timing",
- "uuid",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5044,6 +5016,34 @@ checksum = "8e1d1b10ced5ca923a1fcb8d03e96b8d3268065d724548c0211415ff6ac6bac4"
 dependencies = [
  "core-foundation-sys",
  "libc",
+]
+
+[[package]]
+name = "tachyon"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bon",
+ "eframe",
+ "ego-tree",
+ "env_logger",
+ "fontdb",
+ "gluon",
+ "lightningcss",
+ "log",
+ "reqwest",
+ "scraper",
+ "serde",
+ "serde_json",
+ "strum",
+ "sysinfo",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-timing",
+ "uuid",
 ]
 
 [[package]]

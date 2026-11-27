@@ -9,7 +9,7 @@ use log::info;
 use thiserror::Error;
 use tokio::runtime::{self, Runtime};
 
-use crate::BosonProcess;
+use crate::TachyonProcess;
 
 pub struct Collider {
     client: reqwest::Client,

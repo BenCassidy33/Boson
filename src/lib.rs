@@ -41,14 +41,14 @@ macro_rules! time_function {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum BosonProcess {
+pub enum TachyonProcess {
     Collider,
     Spectra,
     Photon,
 }
 
-pub struct Boson {
-    hub: GluonHub<BosonProcess>,
+pub struct Tachyon {
+    hub: GluonHub<TachyonProcess>,
 }
 
 #[derive(Debug, GluonMessage)]
@@ -56,7 +56,7 @@ pub enum GlobalIPCMessage {
     Shutdown,
 }
 
-impl Boson {
+impl Tachyon {
     pub fn start() -> anyhow::Result<Self> {
         env_logger::init();
 
@@ -65,9 +65,8 @@ impl Boson {
         let collider = Collider::new()?;
         let spectra = Spectra::new(100)?;
 
-        // hub.register(BosonProcesses::Photon, photon);
-        hub.register(BosonProcess::Collider, collider);
-        hub.register(BosonProcess::Spectra, spectra);
+        hub.register(TachyonProcess::Collider, collider);
+        hub.register(TachyonProcess::Spectra, spectra);
 
         let mut photon = Photon::new(&hub);
 
