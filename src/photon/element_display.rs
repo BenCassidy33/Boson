@@ -8,7 +8,7 @@ use lightningcss::{
 };
 use scraper::{ElementRef, node::Element};
 
-use crate::photon::{font_manager::FontManager, tag::HtmlTag};
+use crate::photon::{font_manager::FontManager, style_manager::StyleManager, tag::HtmlTag};
 
 fn parse_all_inline_styles(styles: &str) -> anyhow::Result<Vec<Property<'_>>> {
     styles
@@ -35,7 +35,7 @@ fn parse_inline_style(style: &str) -> anyhow::Result<Property<'_>> {
 pub fn display(
     ui: &mut eframe::egui::Ui,
     node_ref: NodeRef<'_, scraper::Node>,
-    stylesheet: &StyleSheet<'_>,
+    style_manager: &StyleManager<'_>,
     font_manager: &FontManager,
 ) -> anyhow::Result<Response> {
     match node_ref.value() {
@@ -49,7 +49,7 @@ pub fn display(
         }
 
         scraper::Node::Element(element) => {
-            display_element(ui, node_ref, element, stylesheet, font_manager)
+            display_element(ui, node_ref, element, style_manager, font_manager)
         }
 
         todo => todo!("{:?}", todo),
@@ -60,7 +60,7 @@ fn display_element(
     ui: &mut eframe::egui::Ui,
     node_ref: NodeRef<'_, scraper::Node>,
     element: &Element,
-    stylesheet: &StyleSheet<'_>,
+    style_manager: &StyleManager<'_>,
     font_manager: &FontManager,
 ) -> anyhow::Result<Response> {
     let id = element.id();
@@ -76,7 +76,7 @@ fn display_element(
         HtmlTag::Div => Ok(egui::Frame::NONE
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    // apply_styles_for(ui, node_ref, element, stylesheet, font_manager);
+                    apply_styles_for(ui, node_ref, element, style_manager, font_manager);
 
                     for child in node_ref.children() {
                         if let scraper::Node::Text(text) = child.value()
@@ -85,7 +85,7 @@ fn display_element(
                             continue;
                         }
 
-                        let _ = display(ui, child, stylesheet, font_manager);
+                        let _ = display(ui, child, style_manager, font_manager);
                     }
                 })
             })
@@ -99,8 +99,15 @@ fn apply_styles_for(
     ui: &mut eframe::egui::Ui,
     node_ref: NodeRef<'_, scraper::Node>,
     element: &Element,
-    stylesheet: &StyleSheet<'_>,
+    style_manager: &StyleManager<'_>,
     font_manager: &FontManager,
 ) {
+    let er = ElementRef::wrap(node_ref).unwrap();
+    let styles = style_manager.get_styles_for(&er);
+
+    for style in styles {
+        dbg!(style);
+    }
+
     todo!()
 }

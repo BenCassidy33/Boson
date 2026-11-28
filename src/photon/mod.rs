@@ -1,3 +1,10 @@
+pub mod element_display;
+pub mod font_manager;
+pub mod layout_engine;
+pub mod photon_ipc;
+pub mod style_manager;
+pub mod tag;
+
 use std::sync::Arc;
 
 use eframe::egui;
@@ -18,17 +25,11 @@ use crate::{
     default_html, default_stylesheet,
     photon::{
         self, font_manager::FontManager, layout_engine::LayoutEngine, photon_ipc::FetchResource,
+        style_manager::StyleManager,
     },
     spectra::spectra_ipc::{ReplyFrameData, RequestFrameData},
     time_function,
 };
-
-pub mod element_display;
-pub mod font_manager;
-pub mod layout_engine;
-pub mod photon_ipc;
-pub mod statistics;
-pub mod tag;
 
 pub struct Photon<'a> {
     pub font_manager: FontManager,
@@ -58,9 +59,10 @@ impl<'a> Photon<'a> {
     ) {
         let document = document.unwrap_or(default_html());
         let stylesheet = stylesheet.unwrap_or(default_stylesheet(opts));
+        let style_manager = StyleManager::new(stylesheet);
 
         self.ctx = Some(cc.egui_ctx.clone());
-        self.layout_engine = Some(LayoutEngine::new(document, stylesheet, cc));
+        self.layout_engine = Some(LayoutEngine::new(document, style_manager, cc));
 
         time_function!("Fonts loaded in:", {
             self.font_manager
@@ -78,23 +80,19 @@ impl<'a> Photon<'a> {
 impl<'a> eframe::App for Photon<'a> {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
+            let Some(le) = self.layout_engine.as_ref() else {
+                return;
+            };
+
             if !self.first_display {
                 time_function!(
                     "First Render in: ",
-                    self.layout_engine
-                        .as_ref()
-                        .unwrap()
-                        .display(ui, &self.font_manager)
-                        .unwrap()
+                    le.display(ui, &self.font_manager).unwrap()
                 );
 
                 self.first_display = true;
             } else {
-                self.layout_engine
-                    .as_ref()
-                    .unwrap()
-                    .display(ui, &self.font_manager)
-                    .unwrap();
+                le.display(ui, &self.font_manager).unwrap();
             }
         });
     }

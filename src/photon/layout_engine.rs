@@ -15,12 +15,16 @@ use scraper::{ElementRef, Html, Node, Selector, html::Select};
 
 use crate::{
     DEFAULT_HTML, DEFAULT_STYLESHEET,
-    photon::{element_display, font_manager::FontManager},
+    photon::{
+        element_display,
+        font_manager::FontManager,
+        style_manager::{self, StyleManager},
+    },
 };
 
 pub struct LayoutEngine<'a> {
     document: Html,
-    stylesheet: StyleSheet<'a>,
+    style_manager: StyleManager<'a>,
     ctx: Option<egui::Context>,
 }
 
@@ -28,7 +32,7 @@ impl Debug for LayoutEngine<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LayoutEngine")
             .field("document", &self.document)
-            .field("stylesheet", &self.stylesheet)
+            // .field("stylesheet", &self.style_manager)
             .finish()
     }
 }
@@ -38,19 +42,21 @@ impl<'a> Default for LayoutEngine<'a> {
         let stylesheet = StyleSheet::parse(DEFAULT_STYLESHEET, ParserOptions::default())
             .expect("Failed to parse default stylesheet!");
 
+        let style_manager = StyleManager::new(stylesheet);
+
         Self {
             document: Self::parse(DEFAULT_HTML),
-            stylesheet,
+            style_manager,
             ctx: None,
         }
     }
 }
 
 impl<'a> LayoutEngine<'a> {
-    pub fn new(document: Html, stylesheet: StyleSheet<'a>, ctx: &CreationContext<'_>) -> Self {
+    pub fn new(document: Html, style_manager: StyleManager<'a>, ctx: &CreationContext<'_>) -> Self {
         let s = Self {
             document,
-            stylesheet,
+            style_manager,
             ctx: Some(ctx.egui_ctx.clone()),
         };
 
@@ -66,7 +72,7 @@ impl<'a> LayoutEngine<'a> {
     fn setup_imports(&self) {}
 
     pub fn get_fonts<'b>(&'b self) -> Vec<&'b FontFamily> {
-        let rule_list = &self.stylesheet.rules.0;
+        let rule_list = &self.style_manager.stylesheet.rules.0;
         let mut selected_fonts = Vec::new();
 
         for rule in rule_list {
@@ -139,7 +145,7 @@ impl<'a> LayoutEngine<'a> {
         }
 
         for child in body.child_elements() {
-            element_display::display(ui, *child, &self.stylesheet, font_manager);
+            element_display::display(ui, *child, &self.style_manager, font_manager);
         }
 
         Ok(())
